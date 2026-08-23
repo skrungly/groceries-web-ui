@@ -1,23 +1,20 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from "vue-router"
+import { RouterView } from "vue-router"
 
-const route = useRoute()
+import LayoutFooter from "@/components/LayoutFooter.vue"
+import LayoutHeader from "@/components/LayoutHeader.vue"
 </script>
 
 <template>
-  <header>
-    <nav>
-      <!-- ... -->
-    </nav>
-  </header>
+  <LayoutHeader></LayoutHeader>
 
-  <main>
-    <RouterView v-slot="{ Component }">
-      <component :is="Component"/>
-    </RouterView>
+  <main class="flex grow justify-center">
+    <div class="px-4 w-full max-w-7xl">
+      <RouterView v-slot="{ Component }">
+        <component :is="Component"/>
+      </RouterView>
+    </div>
   </main>
 
-  <footer>
-    <!-- ... -->
-  </footer>
+  <LayoutFooter></LayoutFooter>
 </template>
