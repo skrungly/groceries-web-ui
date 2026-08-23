@@ -1,3 +1,9 @@
+import 'javascript-time-ago/locale/en'
+
+import TimeAgo from 'javascript-time-ago'
+
+export const time_ago = new TimeAgo('en')
+
 export function shuffle<T>(array: T[]) {
   // shuffle in-place using Durstenfeld algorithm
   for (let i = array.length - 1; i > 0; i--) {

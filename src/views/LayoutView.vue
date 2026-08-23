@@ -9,7 +9,7 @@ import LayoutHeader from "@/components/LayoutHeader.vue"
   <LayoutHeader></LayoutHeader>
 
   <main class="flex grow justify-center">
-    <div class="px-4 w-full max-w-7xl">
+    <div class="flex flex-col gap-2 px-4 w-full max-w-7xl">
       <RouterView v-slot="{ Component }">
         <component :is="Component"/>
       </RouterView>

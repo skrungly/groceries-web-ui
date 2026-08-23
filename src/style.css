@@ -1,4 +1,14 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-    themes: garden --default;
+    themes: lemonade --default;
+}
+
+@layer utilities {
+  @layer daisyui.l1.l2.l3 {
+    .input:focus,
+    .input:focus-visible,
+    .input:focus-within {
+      outline: none;
+    }
+  }
 }
