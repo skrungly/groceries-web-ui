@@ -96,35 +96,45 @@ function actual_expiry(item: any) {
   return opened_expiry < item.expires_at ? opened_expiry : item.expires_at
 }
 
+function show_item(item: any) {
+  return alert(item.product.name)
+}
+
 // this might be how we want to show items by default
 let shown_items = items.filter((i) => i.percent_remaining)
 shown_items.sort((a, b) => actual_expiry(a) > actual_expiry(b) ? 1 : -1)
 </script>
 
 <template>
-  <label class="input w-full">
-    <input type="search" placeholder="search"/>
-  </label>
+  <div class="flex flex-col gap-4 h-full static">
+    <label class="input w-full">
+      <input type="search" placeholder="search"/>
+    </label>
 
-  <div class="overflow-x-scroll">
-    <table class="table">
-      <thead>
-        <tr>
-          <th class="w-24 min-w-24">remaining</th>
-          <th class="w-full min-w-32">item</th>
-          <th class="w-32 min-w-32">expires</th>
-          <th class="w-32 min-w-32">added</th>
-        </tr>
-      </thead>
+    <div class="overflow-x-scroll h-full">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-24 min-w-24">remaining</th>
+            <th class="w-full min-w-32">item</th>
+            <th class="min-w-32">expires</th>
+            <th class="min-w-32">added</th>
+          </tr>
+        </thead>
 
-      <tbody>
-        <tr v-for="item in shown_items" class="hover:bg-base-200 duration-100">
-          <td><progress class="progress w-full" :value="item.percent_remaining" max="100"/></td>
-          <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
-          <td>{{ time_ago.format(actual_expiry(item)) }}</td>
-          <td>{{ time_ago.format(item.created_at) }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <tbody>
+          <tr v-for="item in shown_items" class="hover:bg-base-200 duration-100 cursor-pointer" @click="show_item(item)">
+            <td><progress class="progress w-full" :value="item.percent_remaining" max="100"/></td>
+            <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
+            <td class="text-nowrap" :class="actual_expiry(item) < Date.now() ? 'text-error' : 'text-base-content'">{{ time_ago.format(actual_expiry(item)) }}</td>
+            <td class="text-nowrap">{{ time_ago.format(item.created_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fab sticky bottom-4">
+      <button class="btn btn-xl btn-circle btn-primary">+</button>
+    </div>
   </div>
 </template>
