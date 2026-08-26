@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import Modal from '@/components/Modal.vue'
 import { time_ago } from '@/utils'
+
+let showNewItemModal = ref(false);
 
 // test data, good enough for a mock-up!
 let products = {
@@ -25,10 +29,10 @@ let products = {
     shelf_life_opened: 86400 * 1000 * 2,
     quantity: 8,
     weight: 480,
-  }
+  },
 }
 
-let items = [
+let items = ref([
   {
     id: 1,
     product: products[1],
@@ -83,7 +87,7 @@ let items = [
     updated_at: new Date(2026, 7, 13, 13, 20, 0),
     opened_at: null,
   },
-]
+])
 
 // TODO: this would be better as a method on an Item class
 function actualExpiry(item: any) {
@@ -96,12 +100,22 @@ function actualExpiry(item: any) {
   return opened_expiry < item.expires_at ? opened_expiry : item.expires_at
 }
 
+// TODO: we should start with a blank "Item" object instead
+let newItem = ref({
+  gtin: null
+})
+
 function showItem(item: any) {
   return alert(item.product.name)
 }
 
+function checkNewItem() {
+  showNewItemModal.value = false
+  console.log(newItem.value.gtin)
+}
+
 // this might be how we want to show items by default
-let shownItems = items.filter((i) => i.percent_remaining)
+let shownItems = items.value.filter((i) => i.percent_remaining)
 shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
 </script>
 
@@ -134,7 +148,23 @@ shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
     </div>
 
     <div class="fab sticky bottom-4">
-      <button class="btn btn-xl btn-circle btn-primary">+</button>
+      <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">+</button>
     </div>
+
+    <Modal v-show="showNewItemModal" @close="showNewItemModal = false">
+      <h3 class="text-lg font-bold">new item</h3>
+
+      <form @submit.prevent="checkNewItem" class="flex flex-col gap-2 pt-4">
+        <div class="flex gap-2">
+          <input type="text" v-model="newItem.gtin" placeholder="scan a barcode" class="input grow"/>
+          <button type="submit" class="btn btn-circle btn-primary">+</button>
+        </div>
+
+        <div class="divider">or</div>
+
+        <button class="btn btn-primary" disabled>select custom product</button>
+        <p class="text-xs text-center text-base-content/60">(coming soon)</p>
+      </form>
+    </Modal>
   </div>
 </template>
