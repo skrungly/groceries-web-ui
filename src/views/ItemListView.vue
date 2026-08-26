@@ -106,7 +106,7 @@ shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 h-full static">
+  <div class="flex flex-col gap-4 h-full relative">
     <label class="input w-full">
       <input type="search" placeholder="search"/>
     </label>
