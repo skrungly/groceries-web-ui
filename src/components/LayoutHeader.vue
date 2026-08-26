@@ -6,7 +6,7 @@ let rotate_emoji = sample_n(FOOD_EMOJI, 6)  // daisyUI can rotate 6 items
 
 <template>
   <header>
-    <nav class="navbar border-b border-b-gray-300">
+    <nav class="navbar">
       <div class="navbar-start"></div>
       <div class="navbar-center">
         <RouterLink to="/" class="text-xl">
