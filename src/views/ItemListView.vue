@@ -86,7 +86,7 @@ let items = [
 ]
 
 // TODO: this would be better as a method on an Item class
-function actual_expiry(item: any) {
+function actualExpiry(item: any) {
   if (item.opened_at === null) {
     return item.expires_at
   }
@@ -96,13 +96,13 @@ function actual_expiry(item: any) {
   return opened_expiry < item.expires_at ? opened_expiry : item.expires_at
 }
 
-function show_item(item: any) {
+function showItem(item: any) {
   return alert(item.product.name)
 }
 
 // this might be how we want to show items by default
-let shown_items = items.filter((i) => i.percent_remaining)
-shown_items.sort((a, b) => actual_expiry(a) > actual_expiry(b) ? 1 : -1)
+let shownItems = items.filter((i) => i.percent_remaining)
+shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
 </script>
 
 <template>
@@ -123,10 +123,10 @@ shown_items.sort((a, b) => actual_expiry(a) > actual_expiry(b) ? 1 : -1)
         </thead>
 
         <tbody>
-          <tr v-for="item in shown_items" class="hover:bg-base-200 duration-100 cursor-pointer" @click="show_item(item)">
+          <tr v-for="item in shownItems" class="hover:bg-base-200 duration-100 cursor-pointer" @click="showItem(item)">
             <td><progress class="progress w-full" :value="item.percent_remaining" max="100"/></td>
             <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
-            <td class="text-nowrap" :class="actual_expiry(item) < Date.now() ? 'text-error' : 'text-base-content'">{{ time_ago.format(actual_expiry(item)) }}</td>
+            <td class="text-nowrap" :class="actualExpiry(item) < Date.now() ? 'text-error' : 'text-base-content'">{{ time_ago.format(actualExpiry(item)) }}</td>
             <td class="text-nowrap">{{ time_ago.format(item.created_at) }}</td>
           </tr>
         </tbody>
