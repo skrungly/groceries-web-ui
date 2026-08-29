@@ -52,6 +52,13 @@ async function submitItem() {
       .then(response => response.data)
   }
 
+  if (itemInfo.value.expires_at) {
+    // we want the *end* of the day of expiry, so add 1 day
+    let actualExpiry = new Date(Date.parse(itemInfo.value.expires_at))
+    actualExpiry.setDate(actualExpiry.getDate() + 1)
+    itemInfo.value.expires_at = actualExpiry.toDateString()
+  }
+
   itemInfo.value.product_id = productInfo.value.id
   await api.post<Item>("/items", itemInfo.value)
 
@@ -113,7 +120,7 @@ async function submitItem() {
 
         <label class="input w-full">
           <span class="label min-w-25">expires on</span>
-          <input type="date"/>
+          <input v-model="itemInfo.expires_at" type="date"/>
         </label>
 
         <label class="input w-full">

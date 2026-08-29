@@ -2,9 +2,9 @@
 import { onMounted, ref, type Ref } from 'vue'
 
 import { api, type Item } from '@/api'
-import { time_ago } from '@/utils'
 import NewItemForm from '@/components/NewItemForm.vue'
 import Modal from '@/components/Modal.vue'
+import ItemListRow from '@/components/ItemListRow.vue'
 
 let showNewItemModal = ref(false)
 let items: Ref<Item[] | null> = ref(null)
@@ -43,11 +43,7 @@ onMounted(fetchItems)
 
         <tbody>
           <tr v-if="items" v-for="item in items" class="hover:bg-base-200 duration-100 cursor-pointer" @click="showItem(item)">
-            <!-- TODO: ItemTableRow component to allow storing each actualExpiry result -->
-            <td><progress class="progress w-full" :value="item.percent_remaining" max="100"></progress></td>
-            <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
-            <td class="text-nowrap">&nbsp</td> <!-- actualExpiry needed here -->
-            <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.created_at))) }}</td>
+            <ItemListRow :item=item></ItemListRow>
           </tr>
         </tbody>
       </table>
