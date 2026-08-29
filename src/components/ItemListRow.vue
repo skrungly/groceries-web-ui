@@ -2,13 +2,11 @@
 import { type Item } from '@/api'
 import { time_ago } from '@/utils'
 
-const props = defineProps<{
-  item: Item
-}>()
+const props = defineProps<{item: Item}>()
 
 function getSoonestExpiry(): Date | null {
-  let expiryDate = null;
-  let openedDate = null;
+  let expiryDate = null
+  let openedDate = null
 
   if (props.item.expires_at) {
     expiryDate = new Date(Date.parse(props.item.expires_at))
