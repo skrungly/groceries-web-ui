@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-    themes: lemonade --default;
+  themes: garden;
+}
+
+@plugin "daisyui/theme" {
+  name: "garden";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-primary: oklch(45% 0.187 3.815);
+  --color-primary-content: oklch(100% 0 0);
 }
 
 @layer utilities {

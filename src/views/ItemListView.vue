@@ -90,14 +90,16 @@ onMounted(async () => {
       <h3 class="text-lg font-bold">new item</h3>
 
       <form @submit.prevent="checkNewItem" class="flex flex-col gap-2 pt-4">
-        <div class="flex gap-2">
-          <input type="text" v-model="newItem.gtin" placeholder="scan a barcode" class="input grow"/>
-          <button type="submit" class="btn btn-circle btn-primary">+</button>
+        <div class="join">
+          <input type="text" v-model="barcodeInput" placeholder="scan a barcode" class="input grow join-item"/>
+          <button type="submit" class="btn btn-primary join-item">+</button>
         </div>
 
         <div class="divider">or</div>
 
-        <button class="btn btn-primary" disabled>select custom product</button>
+        <div class="cursor-not-allowed">
+          <button class="btn btn-primary btn-disabled w-full" disabled>select custom product</button>
+        </div>
         <p class="text-xs text-center text-base-content/60">(coming soon)</p>
       </form>
     </Modal>
