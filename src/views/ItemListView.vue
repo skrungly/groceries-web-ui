@@ -1,122 +1,56 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, type Ref } from 'vue'
+
+import { api, type Item, type Product } from '@/api'
 import Modal from '@/components/Modal.vue'
 import { time_ago } from '@/utils'
 
-let showNewItemModal = ref(false);
+let showNewItemModal = ref(false)
 
-// test data, good enough for a mock-up!
-let products = {
-  1: {
-    gtin: 4088600006956,
-    name: "filtered milk",
-    shelf_life_opened: 86400 * 1000 * 7,
-    quantity: 1,
-    weight: 2000,
-  },
+// /**
+//  * returns the soonest known expiry date for a given Item.
+//  *
+//  * @param {Item} item an Item
+//  */
+// function actualExpiry(item: Item): Date | null {
+//   if (!item.opened_at || !item.product.shelf_life_opened) {
+//     return item.expires_at
+//   }
 
-  2: {
-    gtin: 4061463723178,
-    name: "tomato ketchup",
-    shelf_life_opened: 86400 * 1000 * 6 * 7,
-    quantity: 1,
-    weight: 550,
-  },
+//   let opened_expiry = new Date(
+//     item.opened_at.getTime() + item.product.shelf_life_opened
+//   )
 
-  3: {
-    gtin: 4088600119410,
-    name: "sausage rolls",
-    shelf_life_opened: 86400 * 1000 * 2,
-    quantity: 8,
-    weight: 480,
-  },
-}
+//   if (!item.expires_at) {
+//     return opened_expiry
+//   }
 
-let items = ref([
-  {
-    id: 1,
-    product: products[1],
-    expires_at: new Date(2026, 8, 3),
-    percent_remaining: 30,
-    percent_wasted: 0,
-    created_at: new Date(2026, 7, 18, 16, 0, 0),
-    updated_at: new Date(2026, 7, 18, 16, 20, 0),
-    opened_at: new Date(2026, 7, 18, 16, 20, 0),
-  },
+//   return opened_expiry < item.expires_at ? opened_expiry : item.expires_at
+// }
 
-  {
-    id: 2,
-    product: products[1],
-    expires_at: new Date(2026, 8, 10),
-    percent_remaining: 100,
-    percent_wasted: 0,
-    created_at: new Date(2026, 7, 23, 14, 10, 0),
-    updated_at: new Date(2026, 7, 23, 14, 10, 0),
-    opened_at: null,
-  },
+let barcodeInput: Ref<string | null> = ref(null)
+// let newItem: Ref<Item | null> = ref(null)
 
-  {
-    id: 3,
-    product: products[2],
-    expires_at: new Date(2027, 7, 5),
-    percent_remaining: 50,
-    percent_wasted: 0,
-    created_at: new Date(2026, 7, 17, 10, 0, 0),
-    updated_at: new Date(2026, 7, 22, 21, 20, 0),
-    opened_at: new Date(2026, 7, 18, 12, 40, 0),
-  },
-
-  {
-    id: 4,
-    product: products[3],
-    expires_at: new Date(2026, 7, 12),
-    percent_remaining: 0,
-    percent_wasted: 50,
-    created_at: new Date(2026, 7, 10, 12, 45, 0),
-    updated_at: new Date(2026, 7, 13, 16, 20, 0),
-    opened_at: new Date(2026, 7, 10, 14, 40, 0),
-  },
-
-  {
-    id: 5,
-    product: products[3],
-    expires_at: new Date(2026, 7, 24),
-    percent_remaining: 100,
-    percent_wasted: 0,
-    created_at: new Date(2026, 7, 10, 12, 45, 0),
-    updated_at: new Date(2026, 7, 13, 13, 20, 0),
-    opened_at: null,
-  },
-])
-
-// TODO: this would be better as a method on an Item class
-function actualExpiry(item: any) {
-  if (item.opened_at === null) {
-    return item.expires_at
-  }
-
-  let opened_expiry = new Date(item.opened_at.getTime() + item.product.shelf_life_opened)
-
-  return opened_expiry < item.expires_at ? opened_expiry : item.expires_at
-}
-
-// TODO: we should start with a blank "Item" object instead
-let newItem = ref({
-  gtin: null
-})
-
-function showItem(item: any) {
+/* just a couple of functions for debugging purposes */
+function showItem(item: Item) {
   return alert(item.product.name)
 }
 
 function checkNewItem() {
   showNewItemModal.value = false
-  console.log(newItem.value.gtin)
+  console.log(barcodeInput.value)
 }
 
-// this might be how we want to show items by default
-let shownItems = items.value.filter((i) => i.percent_remaining)
-shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
+let items: Ref<Item[] | null> = ref(null)
+let shownItems: Ref<Item[] | null> = ref(null)
+
+onMounted(async () => {
+  // TODO: error handling
+  items.value = await api.get<Item[]>("items")
+    .then(response => response.data)
+
+  shownItems.value = items.value?.filter(i => i.percent_remaining)!
+})
 </script>
 
 <template>
@@ -137,11 +71,12 @@ shownItems.sort((a, b) => actualExpiry(a) > actualExpiry(b) ? 1 : -1)
         </thead>
 
         <tbody>
-          <tr v-for="item in shownItems" class="hover:bg-base-200 duration-100 cursor-pointer" @click="showItem(item)">
-            <td><progress class="progress w-full" :value="item.percent_remaining" max="100"/></td>
+          <tr v-if="shownItems" v-for="item in shownItems" class="hover:bg-base-200 duration-100 cursor-pointer" @click="showItem(item)">
+            <!-- TODO: ItemTableRow component to allow storing each actualExpiry result -->
+            <td><progress class="progress w-full" :value="item.percent_remaining" max="100"></progress></td>
             <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
-            <td class="text-nowrap" :class="actualExpiry(item) < Date.now() ? 'text-error' : 'text-base-content'">{{ time_ago.format(actualExpiry(item)) }}</td>
-            <td class="text-nowrap">{{ time_ago.format(item.created_at) }}</td>
+            <td class="text-nowrap">&nbsp</td> <!-- actualExpiry needed here -->
+            <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.created_at))) }}</td>
           </tr>
         </tbody>
       </table>
