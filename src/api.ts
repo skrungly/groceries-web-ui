@@ -26,6 +26,7 @@ export interface Product extends Timestamped {
 export interface Item extends Timestamped {
   id: string
   user_id: string | null
+  product_id: string
   product: Product
   percent_remaining: number
   percent_wasted: number

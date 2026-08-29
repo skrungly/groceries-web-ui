@@ -7,21 +7,21 @@ import NewItemForm from '@/components/NewItemForm.vue'
 import Modal from '@/components/Modal.vue'
 
 let showNewItemModal = ref(false)
+let items: Ref<Item[] | null> = ref(null)
+
+async function fetchItems() {
+  items.value = (
+    await api.get<Item[]>("/items")
+      .then(response => response.data)
+  ).filter(i => i.percent_remaining)!
+}
 
 /* just a couple of functions for debugging purposes */
 function showItem(item: Item) {
   return alert(item.product.name)
 }
 
-let items: Ref<Item[] | null> = ref(null)
-
-onMounted(async () => {
-  // TODO: error handling
-  items.value = (
-    await api.get<Item[]>("/items")
-      .then(response => response.data)
-  ).filter(i => i.percent_remaining)!
-})
+onMounted(fetchItems)
 </script>
 
 <template>
@@ -60,7 +60,7 @@ onMounted(async () => {
     <Modal v-show="showNewItemModal" @close="showNewItemModal = false">
       <h3 class="text-lg font-bold">new item</h3>
 
-      <NewItemForm></NewItemForm>
+      <NewItemForm @submit="fetchItems"></NewItemForm>
     </Modal>
   </div>
 </template>
