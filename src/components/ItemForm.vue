@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, useTemplateRef, type Ref } from 'vue'
+import { nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from 'vue'
 
 import { api, type Item, type Product } from '@/api'
 
@@ -22,9 +22,19 @@ async function resetForm() {
   productInfoRequired.value = false
 
   if (!props.itemToEdit) {
-    // focus needs to be delayed in order to work
+    // focus doesn't apply without deferring to nextTick. not sure why!
     nextTick(() => barcodeField.value?.focus())
   }
+}
+
+async function editQuantity(event: InputEvent) {
+  productInfo.value.quantity = parseInt((event.target as HTMLInputElement).value) || undefined
+
+  // if we try to modify `percent_remaining` now, its corresponding input[type=range] will
+  // enforce its current 'max' attribute, which is based on the old product quantity. by
+  // deferring this to nextTick, we can ensure that the 'max' attribute adapts to the new
+  // quantity change *before* we set `percent_remaining` to its new maximum value
+  nextTick(() => itemInfo.value.percent_remaining = 100 * (productInfo.value.quantity ?? 1))
 }
 
 async function setupNewItemForm() {
@@ -45,7 +55,7 @@ async function setupNewItemForm() {
   barcodeChecked.value = true
 
   // set initial values for the form
-  itemInfo.value.percent_remaining = 100
+  itemInfo.value.percent_remaining = 100 * (productInfo.value.quantity ?? 1)
 }
 
 async function discardItem() {
@@ -70,11 +80,17 @@ async function submitItem() {
     }).then(response => response.data)
   }
 
-  if (itemInfo.value.expires_at) {
-    // we want the *end* of the day of expiry, so add 1 day
+  if (!props.itemToEdit && itemInfo.value.expires_at) {
+    // for new items, we want the *end* of the day of expiry, so add 1 day
     let actualExpiry = new Date(Date.parse(itemInfo.value.expires_at))
     actualExpiry.setDate(actualExpiry.getDate() + 1)
     itemInfo.value.expires_at = actualExpiry.toDateString()
+  }
+
+  // it would be nice to track both remaining % and waste % at the same time,
+  // but for now the user can edit 'percent_remaining' to undiscard an item
+  if (itemInfo.value.percent_remaining && itemInfo.value.percent_wasted) {
+    itemInfo.value.percent_wasted = 0
   }
 
   itemInfo.value.product_id = productInfo.value.id
@@ -121,7 +137,13 @@ onMounted(resetForm)
 
         <label class="input w-full">
           <span class="label min-w-25">quantity</span>
-          <input v-model="productInfo.quantity" type="number" placeholder="1" :disabled="!productInfoRequired"/>
+          <input
+            :value="productInfo.quantity"
+            @input="editQuantity"
+            type="number"
+            placeholder="1"
+            :disabled="!productInfoRequired"
+          />
         </label>
 
         <label v-if="productInfoRequired" class="input w-full">
@@ -149,9 +171,20 @@ onMounted(resetForm)
           <input v-model="itemInfo.expires_at" type="date"/>
         </label>
 
-        <label class="input w-full">
+        <label v-if="!itemToEdit || productInfo.quantity" class="input w-full">
           <span class="label min-w-25">remaining</span>
-          <input v-model="itemInfo.percent_remaining" type="range" min="0" max="100" class="range range-xs h-4"/>
+          <input
+            v-model="itemInfo.percent_remaining"
+            type="range"
+            min="0"
+            :max="100 * (productInfo.quantity ?? 1)"
+            :step="productInfo.quantity && productInfo.quantity > 1 ? 100 : 1"
+            class="range range-xs h-4"
+          />
+
+          <span v-if="productInfo.quantity && productInfo.quantity > 1" class="label min-w-12 justify-center">
+            {{ itemInfo.percent_remaining! / 100 }}
+          </span>
         </label>
       </div>
 
