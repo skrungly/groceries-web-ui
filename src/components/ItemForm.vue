@@ -14,6 +14,16 @@ const productInfoRequired = ref(false)
 
 const barcodeField = useTemplateRef("barcode")
 
+function getLocalISOTime(date?: Date): string {
+  if (date === undefined) {
+    date = new Date(Date.now())
+  }
+
+  let tzOffset = date.getTimezoneOffset() * 60000  // minutes -> ms
+  let localTimestamp = new Date(date.getTime() - tzOffset)
+  return localTimestamp.toISOString().slice(0, 16)  // cut trailing 'Z'
+}
+
 async function resetForm() {
   barcodeInput.value = null
   barcodeChecked.value = false
@@ -27,7 +37,27 @@ async function resetForm() {
   }
 }
 
-async function editQuantity(event: InputEvent) {
+// items are to be 'expired' at the *end* of the displayed date, so we have to
+// adjust the actual expiry date to reflect this difference (i.e. add 1 day)
+async function onEditExpiry(event: InputEvent) {
+  let expiry = new Date(Date.parse((event.target as HTMLInputElement).value))
+  expiry.setDate(expiry.getDate() + 1)
+
+  itemInfo.value.expires_at = expiry.toISOString().slice(0, 10)
+}
+
+// opposite to above; adjust the *actual* expiry to show the display date
+function displayExpiry(): string | null {
+  if (!itemInfo.value.expires_at) {
+    return null
+  }
+
+  let expiry = new Date(Date.parse(itemInfo.value.expires_at))
+  expiry.setDate(expiry.getDate() - 1)
+  return expiry.toISOString().slice(0, 10)
+}
+
+async function onEditQuantity(event: InputEvent) {
   productInfo.value.quantity = parseInt((event.target as HTMLInputElement).value) || undefined
 
   // if we try to modify `percent_remaining` now, its corresponding input[type=range] will
@@ -78,13 +108,6 @@ async function submitItem() {
       url: `/products/${endpoint}`,
       data: productInfo.value
     }).then(response => response.data)
-  }
-
-  if (!props.itemToEdit && itemInfo.value.expires_at) {
-    // for new items, we want the *end* of the day of expiry, so add 1 day
-    let actualExpiry = new Date(Date.parse(itemInfo.value.expires_at))
-    actualExpiry.setDate(actualExpiry.getDate() + 1)
-    itemInfo.value.expires_at = actualExpiry.toDateString()
   }
 
   // it would be nice to track both remaining % and waste % at the same time,
@@ -139,7 +162,7 @@ onMounted(resetForm)
           <span class="label min-w-25">quantity</span>
           <input
             :value="productInfo.quantity"
-            @input="editQuantity"
+            @input="onEditQuantity"
             type="number"
             placeholder="1"
             :disabled="!productInfoRequired"
@@ -168,8 +191,25 @@ onMounted(resetForm)
 
         <label class="input w-full">
           <span class="label min-w-25">expires on</span>
-          <input v-model="itemInfo.expires_at" type="date"/>
+          <input
+            :value="displayExpiry()"
+            @input="onEditExpiry"
+            type="date"
+          />
         </label>
+
+        <div class="join w-full">
+          <label class="input join-item grow">
+            <span class="label min-w-25">opened at</span>
+            <input class="w-0 grow overflow-scroll" v-model="itemInfo.opened_at" type="datetime-local"/>
+          </label>
+
+          <button
+            class="btn join-item"
+            type="button"
+            @click="itemInfo.opened_at = getLocalISOTime()"
+          >now</button>
+        </div>
 
         <label v-if="!itemToEdit || productInfo.quantity" class="input w-full">
           <span class="label min-w-25">remaining</span>
