@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { type Item } from '@/api'
 import { time_ago } from '@/utils'
+import { computed } from 'vue';
 
 const props = defineProps<{item: Item}>()
 
@@ -33,7 +34,7 @@ function getSoonestExpiry(): Date | null {
   return expiryDate
 }
 
-let soonestExpiry = getSoonestExpiry()
+const soonestExpiry = computed(getSoonestExpiry)
 </script>
 
 <template>

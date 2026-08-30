@@ -1,29 +1,33 @@
 <script setup lang="ts">
-import { ref, type Ref } from 'vue'
+import { nextTick, onMounted, ref, useTemplateRef, type Ref } from 'vue'
 
 import { api, type Item, type Product } from '@/api'
 
+const props = defineProps<{ itemToEdit: Item | null }>()
 const emit = defineEmits(["submit"])
 
-let barcodeInput: Ref<string | null> = ref(null)
-let barcodeChecked: Ref<boolean> = ref(false)
+const barcodeInput: Ref<string | null> = ref(null)
+const barcodeChecked: Ref<boolean> = ref(false)
+const itemInfo: Ref<Partial<Item>> = ref({})
+const productInfo: Ref<Partial<Product>> = ref({})
+const productInfoRequired = ref(false)
 
-let itemInfo: Ref<Partial<Item>> = ref({})
-let productInfo: Ref<Partial<Product>> = ref({})
-
-let productInfoRequired = ref(false)
+const barcodeField = useTemplateRef("barcode")
 
 async function resetForm() {
   barcodeInput.value = null
   barcodeChecked.value = false
-  itemInfo.value = {}
-  productInfo.value = {}
+  itemInfo.value = { ...props.itemToEdit }
+  productInfo.value = props.itemToEdit?.product ?? {}
   productInfoRequired.value = false
 
-  document.getElementById("barcode")?.focus()
+  if (!props.itemToEdit) {
+    // focus needs to be delayed in order to work
+    nextTick(() => barcodeField.value?.focus())
+  }
 }
 
-async function setupItemForm() {
+async function setupNewItemForm() {
   let products = await api.get<Product[]>(
     "/products", {
       params: {
@@ -44,12 +48,26 @@ async function setupItemForm() {
   itemInfo.value.percent_remaining = 100
 }
 
+async function discardItem() {
+  itemInfo.value.percent_wasted = itemInfo.value.percent_remaining
+  itemInfo.value.percent_remaining = 0
+
+  submitItem()
+}
+
 async function submitItem() {
+  // adjust behaviour slightly for creating vs editing
+  let method = props.itemToEdit ? "put" : "post"
+  let endpoint = props.itemToEdit?.id ?? ""
+
   if (productInfoRequired.value) {
     productInfo.value.barcode = barcodeInput.value
 
-    productInfo.value = await api.post<Product>("/products", productInfo.value)
-      .then(response => response.data)
+    productInfo.value = await api.request<Product>({
+      method: method,
+      url: `/products/${endpoint}`,
+      data: productInfo.value
+    }).then(response => response.data)
   }
 
   if (itemInfo.value.expires_at) {
@@ -60,19 +78,27 @@ async function submitItem() {
   }
 
   itemInfo.value.product_id = productInfo.value.id
-  await api.post<Item>("/items", itemInfo.value)
+  await api.request<Item>({
+    method: method,
+    url: `/items/${endpoint}`,
+    data: itemInfo.value
+  })
 
   resetForm()
   emit("submit")
 }
+
+onMounted(resetForm)
 </script>
 
 <template>
   <div class="flex flex-col gap-4 pt-4">
-    <form @submit.prevent="setupItemForm" class="flex gap-4">
+    <!-- only need to scan a barcode when creating new item -->
+    <form v-if="!itemToEdit" @submit.prevent="setupNewItemForm" class="flex gap-4">
       <input
+        tabindex="0"
         type="text"
-        id="barcode"
+        ref="barcode"
         v-model="barcodeInput"
         placeholder="scan a barcode"
         class="input grow"
@@ -115,7 +141,7 @@ async function submitItem() {
         </label>
       </div>
 
-      <div v-if="barcodeChecked" class="flex flex-col gap-4 w-full">
+      <div v-if="barcodeChecked || itemToEdit" class="flex flex-col gap-4 w-full">
         <div class="divider text-xs m-0">item info</div>
 
         <label class="input w-full">
@@ -127,15 +153,27 @@ async function submitItem() {
           <span class="label min-w-25">remaining</span>
           <input v-model="itemInfo.percent_remaining" type="range" min="0" max="100" class="range range-xs h-4"/>
         </label>
-
       </div>
 
-      <div v-show="barcodeChecked" class="flex gap-4 w-full">
+      <div v-show="barcodeChecked || itemToEdit" class="flex gap-4 w-full">
+        <button
+          v-if="itemToEdit"
+          class="btn btn-error w-0 grow"
+          type="button"
+          @click="discardItem"
+          :disabled="itemInfo.percent_remaining == 0"
+        >discard</button>
+
         <button class="btn w-0 grow" type="button" @click="resetForm">reset</button>
-        <button class="btn btn-neutral w-0 grow" type="submit">submit</button>
+
+        <button class="btn btn-accent w-0 grow" type="submit">
+          <span v-if="itemToEdit && itemInfo.percent_remaining == 0">finish</span>
+          <span v-else-if="itemToEdit">submit</span>
+          <span v-else>create</span>
+        </button>
       </div>
 
-      <div v-if="!barcodeChecked" class="flex flex-col gap-4 w-full">
+      <div v-if="!barcodeChecked && !itemToEdit" class="flex flex-col gap-4 w-full">
         <div class="divider text-xs m-0">or</div>
 
         <div class="cursor-not-allowed">
