@@ -44,7 +44,13 @@ const soonestExpiry = computed(getSoonestExpiry)
       :max="100 * item.product.quantity"
     ></progress>
   </td>
-  <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">{{ item.product.name }}</td>
+  <td class="text-nowrap max-w-0 overflow-hidden text-ellipsis">
+    {{ item.product.name }}
+    <span class="text-base-content/60 text-xs">
+      <span v-if="item.product.quantity > 1">({{ item.product.quantity }}pc)</span>
+      <span v-else-if="item.product.net_weight">({{ item.product.net_weight }}g)</span>
+    </span>
+  </td>
   <td class="text-nowrap">
     <span v-if="soonestExpiry && item.percent_remaining">
       {{ time_ago.format(soonestExpiry) }}
