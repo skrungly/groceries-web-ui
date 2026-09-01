@@ -1,0 +1,10 @@
+name: groceries-frontend
+
+services:
+  web:
+    build: .
+
+networks:
+  default:
+    name: groceries-nginx
+    external: true
