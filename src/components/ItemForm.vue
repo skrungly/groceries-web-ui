@@ -32,6 +32,7 @@ async function resetForm() {
   itemInfo.value = { ...props.itemToEdit }
   productInfo.value = props.itemToEdit?.product ?? {}
   productInfoRequired.value = false
+  expiryInput.value = null
 
   if (!props.itemToEdit) {
     // focus doesn't apply without deferring to nextTick. not sure why!
