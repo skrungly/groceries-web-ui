@@ -1,38 +1,8 @@
 <script setup lang="ts">
 import { type Item } from '@/api'
 import { time_ago } from '@/utils'
-import { computed } from 'vue';
 
 const props = defineProps<{item: Item}>()
-
-function getSoonestExpiry(): Date | null {
-  let expiryDate = null
-  let openedDate = null
-
-  if (props.item.expires_at) {
-    expiryDate = new Date(Date.parse(props.item.expires_at))
-  }
-
-  if (props.item.opened_at) {
-    openedDate = new Date(Date.parse(props.item.opened_at))
-  }
-
-  if (openedDate && props.item.product.shelf_life_opened) {
-    let openedExpiry = new Date(openedDate)
-    openedExpiry.setDate(
-      openedExpiry.getDate()
-      + props.item.product.shelf_life_opened
-    )
-
-    if (expiryDate && openedExpiry < expiryDate) {
-      return openedExpiry
-    }
-  }
-
-  return expiryDate
-}
-
-const soonestExpiry = computed(getSoonestExpiry)
 </script>
 
 <template>
@@ -52,8 +22,8 @@ const soonestExpiry = computed(getSoonestExpiry)
     </span>
   </td>
   <td class="text-nowrap">
-    <span v-if="soonestExpiry && item.percent_remaining">
-      {{ time_ago.format(soonestExpiry) }}
+    <span v-if="item.soonest_expiry && item.percent_remaining">
+      {{ time_ago.format(new Date(Date.parse(item.soonest_expiry))) }}
     </span>
   </td>
   <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.created_at))) }}</td>

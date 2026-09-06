@@ -16,10 +16,14 @@ async function fetchItems() {
   // ensure the edit form is closed
   itemToEdit.value = null
 
-  items.value = (
-    await api.get<Item[]>("/items")
-      .then(response => response.data)
-  ).filter(i => i.percent_remaining)!
+  await api.get<Item[]>(
+    "/items", {
+      params: {
+        sort: 'soonest_expiry',
+        remaining: 1  // i.e. true
+      }
+    }
+  ).then(response => items.value = response.data)
 }
 
 onMounted(fetchItems)

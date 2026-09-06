@@ -32,4 +32,5 @@ export interface Item extends Timestamped {
   percent_wasted: number
   expires_at: string | null
   opened_at: string | null
+  soonest_expiry: string | null
 }
