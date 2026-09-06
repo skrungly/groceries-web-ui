@@ -12,16 +12,18 @@ const itemInfo: Ref<Partial<Item>> = ref({})
 const productInfo: Ref<Partial<Product>> = ref({})
 const productInfoRequired = ref(false)
 
+const expiryInput: Ref<string | null> = ref(null)
+
 const barcodeField = useTemplateRef("barcode")
 
-function getLocalISOTime(date?: Date): string {
+function getLocalISOString(date?: Date): string {
   if (date === undefined) {
     date = new Date(Date.now())
   }
 
   let tzOffset = date.getTimezoneOffset() * 60000  // minutes -> ms
   let localTimestamp = new Date(date.getTime() - tzOffset)
-  return localTimestamp.toISOString().slice(0, 16)  // cut trailing 'Z'
+  return localTimestamp.toISOString().slice(0, 16)
 }
 
 async function resetForm() {
@@ -35,26 +37,18 @@ async function resetForm() {
     // focus doesn't apply without deferring to nextTick. not sure why!
     nextTick(() => barcodeField.value?.focus())
   }
-}
 
-// items are to be 'expired' at the *end* of the displayed date, so we have to
-// adjust the actual expiry date to reflect this difference (i.e. add 1 day)
-async function onEditExpiry(event: InputEvent) {
-  let expiry = new Date(Date.parse((event.target as HTMLInputElement).value))
-  expiry.setDate(expiry.getDate() + 1)
-
-  itemInfo.value.expires_at = expiry.toISOString().slice(0, 10)
-}
-
-// opposite to above; adjust the *actual* expiry to show the display date
-function displayExpiry(): string | null {
-  if (!itemInfo.value.expires_at) {
-    return null
+  if (props.itemToEdit?.expires_at) {
+    expiryInput.value = getLocalISOString(
+      new Date(Date.parse(props.itemToEdit.expires_at)),
+    ).split("T")[0] ?? null
   }
 
-  let expiry = new Date(Date.parse(itemInfo.value.expires_at))
-  expiry.setDate(expiry.getDate() - 1)
-  return expiry.toISOString().slice(0, 10)
+  if (props.itemToEdit?.opened_at) {
+    itemInfo.value.opened_at = getLocalISOString(
+      new Date(Date.parse(props.itemToEdit.opened_at))
+    )
+  }
 }
 
 async function onEditQuantity(event: InputEvent) {
@@ -114,6 +108,17 @@ async function submitItem() {
   // but for now the user can edit 'percent_remaining' to undiscard an item
   if (itemInfo.value.percent_remaining && itemInfo.value.percent_wasted) {
     itemInfo.value.percent_wasted = 0
+  }
+
+  if (expiryInput.value) {
+    // expiry dates on packaging refers to the end of the day
+    let expiryDate = new Date(Date.parse(expiryInput.value))
+    expiryDate.setHours(23)
+    expiryDate.setMinutes(59)
+    expiryDate.setSeconds(59)
+    expiryDate.setMilliseconds(999)
+
+    itemInfo.value.expires_at = expiryDate.toISOString()
   }
 
   itemInfo.value.product_id = productInfo.value.id
@@ -191,23 +196,19 @@ onMounted(resetForm)
 
         <label class="input w-full">
           <span class="label min-w-25">expires on</span>
-          <input
-            :value="displayExpiry()"
-            @input="onEditExpiry"
-            type="date"
-          />
+          <input v-model="expiryInput" type="date"/>
         </label>
 
         <div class="join w-full">
           <label class="input join-item grow">
             <span class="label min-w-25">opened at</span>
-            <input class="w-0 grow overflow-scroll" v-model="itemInfo.opened_at" type="datetime-local"/>
+            <input class="w-0 grow overflow-scroll" v-model="itemInfo.opened_at" type="datetime-local" step="60"/>
           </label>
 
           <button
             class="btn join-item"
             type="button"
-            @click="itemInfo.opened_at = getLocalISOTime()"
+            @click="itemInfo.opened_at = getLocalISOString()"
           >now</button>
         </div>
 
