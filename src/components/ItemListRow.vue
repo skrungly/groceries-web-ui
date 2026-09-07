@@ -1,8 +1,26 @@
 <script setup lang="ts">
 import { type Item } from '@/api'
 import { time_ago } from '@/utils'
+import { ref } from 'vue';
 
 const props = defineProps<{item: Item}>()
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+const soonestExpiry = ref(
+  (props.item.soonest_expiry)
+    ? new Date(Date.parse(props.item.soonest_expiry))
+    : null
+)
+
+function expiryColour(expiry: Date) {
+  let now = new Date(Date.now())
+  let daysLeft = (expiry.getTime() - now.getTime()) / MS_PER_DAY
+
+  if (daysLeft <= 0) {
+    return "text-red-800 font-medium"
+  }
+}
 </script>
 
 <template>
@@ -22,8 +40,8 @@ const props = defineProps<{item: Item}>()
     </span>
   </td>
   <td class="text-nowrap">
-    <span v-if="item.soonest_expiry && item.percent_remaining">
-      {{ time_ago.format(new Date(Date.parse(item.soonest_expiry))) }}
+    <span v-if="soonestExpiry && item.percent_remaining" :class="expiryColour(soonestExpiry)">
+      {{ time_ago.format(soonestExpiry) }}
     </span>
   </td>
   <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.created_at))) }}</td>

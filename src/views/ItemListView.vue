@@ -6,7 +6,8 @@ import Modal from '@/components/Modal.vue'
 import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
 
-let items: Ref<Item[] | null> = ref(null)
+let currentItems: Ref<Item[] | null> = ref(null)
+let oldItems: Ref<Item[] | null> = ref(null)
 
 let showNewItemModal = ref(false)
 
@@ -23,7 +24,16 @@ async function fetchItems() {
         remaining: 1  // i.e. true
       }
     }
-  ).then(response => items.value = response.data)
+  ).then(response => currentItems.value = response.data)
+
+  await api.get<Item[]>(
+    "/items", {
+      params: {
+        sort: '-updated_at',
+        remaining: 0
+      }
+    }
+  ).then(response => oldItems.value = response.data)
 }
 
 onMounted(fetchItems)
@@ -47,7 +57,11 @@ onMounted(fetchItems)
         </thead>
 
         <tbody>
-          <tr v-if="items" v-for="item in items" class="hover:bg-base-200 duration-100 cursor-pointer" @click="itemToEdit = item">
+          <tr v-if="currentItems" v-for="item in currentItems" class="hover:bg-base-200 duration-100 cursor-pointer" @click="itemToEdit = item">
+            <ItemListRow :item=item></ItemListRow>
+          </tr>
+
+          <tr v-if="oldItems" v-for="item in oldItems" class="hover:bg-base-200 duration-100 cursor-pointer opacity-50" @click="itemToEdit = item">
             <ItemListRow :item=item></ItemListRow>
           </tr>
         </tbody>
