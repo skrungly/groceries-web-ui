@@ -1,39 +1,82 @@
 <script setup lang="ts">
 import { onMounted, ref, type Ref } from 'vue'
 
-import { api, type Item } from '@/api'
+import { api, ItemSortOption, type Item } from '@/api'
 import Modal from '@/components/Modal.vue'
 import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
 
-let currentItems: Ref<Item[] | null> = ref(null)
-let oldItems: Ref<Item[] | null> = ref(null)
+const items: Ref<Item[] | null> = ref(null)
 
-let showNewItemModal = ref(false)
+interface SortableTableHeader {
+  title: string,
+  sort: ItemSortOption,
+  style: string
+}
 
-let itemToEdit: Ref<Item | null> = ref(null)
+const SORTABLE_HEADERS: SortableTableHeader[] = [
+  {
+    title: "item",
+    sort: ItemSortOption.Name,
+    style: "w-full min-w-48",
+  },
+  {
+    title: "expires",
+    sort: ItemSortOption.Expiry,
+    style: "min-w-32",
+  },
+  {
+    title: "added",
+    sort: ItemSortOption.Created,
+    style: "min-w-32",
+  }
+]
+
+const sortBy: Ref<ItemSortOption | null> = ref(null)
+const sortAsc: Ref<boolean> = ref(true)
+
+const showNewItemModal = ref(false)
+const itemToEdit: Ref<Item | null> = ref(null)
 
 async function fetchItems() {
   // ensure the edit form is closed
   itemToEdit.value = null
 
-  await api.get<Item[]>(
-    "/items", {
-      params: {
-        sort: 'soonest_expiry',
-        remaining: 1  // i.e. true
-      }
-    }
-  ).then(response => currentItems.value = response.data)
+  let sortPrefix = sortBy.value && !sortAsc.value ? "-" : ""
+  let sortQuery = sortBy.value ? sortPrefix + sortBy.value : null
 
   await api.get<Item[]>(
     "/items", {
       params: {
-        sort: '-updated_at',
+        sort: sortQuery ?? ItemSortOption.Expiry,
+        remaining: 1  // i.e. true
+      }
+    }
+  ).then(response => items.value = response.data)
+
+  await api.get<Item[]>(
+    "/items", {
+      params: {
+        sort: sortQuery ?? `-${ItemSortOption.Updated}`,
         remaining: 0
       }
     }
-  ).then(response => oldItems.value = response.data)
+  ).then(response => items.value = items.value?.concat(response.data) ?? null)
+}
+
+async function changeSort(option: ItemSortOption) {
+  if (sortBy.value !== option) {
+    sortBy.value = option
+    sortAsc.value = true
+
+  } else if (sortAsc.value) {
+    sortAsc.value = false
+
+  } else {
+    sortBy.value = null
+  }
+
+  fetchItems()
 }
 
 onMounted(fetchItems)
@@ -47,21 +90,36 @@ onMounted(fetchItems)
 
     <div class="overflow-x-scroll h-full">
       <table class="table">
-        <thead>
+        <thead class="select-none">
           <tr>
             <th class="w-24 min-w-24">remaining</th>
-            <th class="w-full min-w-48">item</th>
-            <th class="min-w-32">expires</th>
-            <th class="min-w-32">added</th>
+
+            <th
+              v-for="header in SORTABLE_HEADERS"
+              class="cursor-pointer"
+              :class="header.style"
+              @click="changeSort(header.sort)"
+            >
+              <span class="flex gap-1">
+                {{ header.title }}
+                <span v-if="sortBy == header.sort">
+                  <span v-if="sortAsc">↑</span>
+                  <span v-else>↓</span>
+                </span>
+              </span>
+            </th>
+
           </tr>
         </thead>
 
         <tbody>
-          <tr v-if="currentItems" v-for="item in currentItems" class="hover:bg-base-200 duration-100 cursor-pointer" @click="itemToEdit = item">
-            <ItemListRow :item=item></ItemListRow>
-          </tr>
-
-          <tr v-if="oldItems" v-for="item in oldItems" class="hover:bg-base-200 duration-100 cursor-pointer opacity-50" @click="itemToEdit = item">
+          <tr
+            v-if="items"
+            v-for="item in items"
+            class="hover:bg-base-200 duration-100 cursor-pointer"
+            :class="item.percent_remaining ? 'opacity-100' : 'opacity-50'"
+            @click="itemToEdit = item"
+          >
             <ItemListRow :item=item></ItemListRow>
           </tr>
         </tbody>

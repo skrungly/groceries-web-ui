@@ -34,3 +34,10 @@ export interface Item extends Timestamped {
   opened_at: string | null
   soonest_expiry: string | null
 }
+
+export enum ItemSortOption {
+  Name = "name",
+  Expiry = "soonest_expiry",
+  Created = "created_at",
+  Updated = "updated_at",
+}

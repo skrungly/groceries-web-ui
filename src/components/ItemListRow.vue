@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { type Item } from '@/api'
 import { time_ago } from '@/utils'
-import { ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{item: Item}>()
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
-const soonestExpiry = ref(
+const soonestExpiry = computed(() =>
   (props.item.soonest_expiry)
     ? new Date(Date.parse(props.item.soonest_expiry))
     : null
