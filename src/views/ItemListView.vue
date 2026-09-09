@@ -5,6 +5,7 @@ import { api, ItemSortOption, type Item } from '@/api'
 import Modal from '@/components/Modal.vue'
 import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const items: Ref<Item[] | null> = ref(null)
 
@@ -102,9 +103,10 @@ onMounted(fetchItems)
             >
               <span class="flex gap-1">
                 {{ header.title }}
-                <span v-if="sortBy == header.sort">
-                  <span v-if="sortAsc">↑</span>
-                  <span v-else>↓</span>
+                <span class="flex flex-col justify-center text-xs">
+                  <FontAwesomeIcon v-if="sortBy !== header.sort" class="opacity-50" icon="fa-solid fa-sort"/>
+                  <FontAwesomeIcon v-else-if="sortAsc" class="opacity-80" icon="fa-solid fa-sort-up"/>
+                  <FontAwesomeIcon v-else class="opacity-80" icon="fa-solid fa-sort-down"/>
                 </span>
               </span>
             </th>
@@ -127,7 +129,9 @@ onMounted(fetchItems)
     </div>
 
     <div class="fab sticky bottom-4">
-      <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">+</button>
+      <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">
+        <FontAwesomeIcon icon="fa-solid fa-plus"/>
+      </button>
     </div>
 
     <Modal v-if="showNewItemModal" @close="showNewItemModal = false">
