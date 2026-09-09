@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, type Ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 
 import { api, ItemSortOption, type Item } from '@/api'
 import Modal from '@/components/Modal.vue'
@@ -33,6 +33,20 @@ const SORTABLE_HEADERS: SortableTableHeader[] = [
   }
 ]
 
+const SEARCH_INTERVAL_MS = 200
+
+const searchInput: Ref<string> = ref("")
+let prevSearch = ""
+
+const searchInterval = setInterval(
+  function () {
+    if (searchInput.value != prevSearch) {
+      fetchItems()
+      prevSearch = searchInput.value
+    }
+  }, SEARCH_INTERVAL_MS
+)
+
 const sortBy: Ref<ItemSortOption | null> = ref(null)
 const sortAsc: Ref<boolean> = ref(true)
 
@@ -46,11 +60,27 @@ async function fetchItems() {
   let sortPrefix = sortBy.value && !sortAsc.value ? "-" : ""
   let sortQuery = sortBy.value ? sortPrefix + sortBy.value : null
 
+  let search = searchInput.value.trim();
+
+  // intentionally undefined so unset params aren't included
+  let barcode;
+  let name;
+
+  // barcode searching doesn't really need a regex, but it would be
+  // nice to explicitly support other non-numeric formats in future
+  if (search.match(/^\d+$/)) {
+    barcode = search
+  } else if (search) {
+    name = search
+  }
+
   await api.get<Item[]>(
     "/items", {
       params: {
         sort: sortQuery ?? ItemSortOption.Expiry,
-        remaining: 1  // i.e. true
+        remaining: 1,  // i.e. true
+        barcode: barcode,
+        name: name,
       }
     }
   ).then(response => items.value = response.data)
@@ -59,7 +89,9 @@ async function fetchItems() {
     "/items", {
       params: {
         sort: sortQuery ?? `-${ItemSortOption.Updated}`,
-        remaining: 0
+        remaining: 0,
+        barcode: barcode,
+        name: name,
       }
     }
   ).then(response => items.value = items.value?.concat(response.data) ?? null)
@@ -81,12 +113,17 @@ async function changeSort(option: ItemSortOption) {
 }
 
 onMounted(fetchItems)
+onUnmounted(() => clearInterval(searchInterval))
 </script>
 
 <template>
   <div class="flex flex-col gap-4 h-full relative">
-    <label class="input w-full">
-      <input type="search" placeholder="search"/>
+    <label class="input w-full shrink-0 pr-0">
+      <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
+      <input type="search" v-model="searchInput" placeholder="search"/>
+      <button v-if="searchInput" class="cursor-pointer px-4 h-full opacity-50 hover:opacity-80" @click="searchInput = ''">
+        <FontAwesomeIcon icon="fa-solid fa-xmark"/>
+      </button>
     </label>
 
     <div class="overflow-x-scroll h-full">
