@@ -27,8 +27,8 @@ const SORTABLE_HEADERS: SortableTableHeader[] = [
     style: "min-w-32",
   },
   {
-    title: "added",
-    sort: ItemSortOption.Created,
+    title: "updated",
+    sort: ItemSortOption.Updated,
     style: "min-w-32",
   }
 ]

@@ -44,5 +44,5 @@ function expiryColour(expiry: Date) {
       {{ time_ago.format(soonestExpiry) }}
     </span>
   </td>
-  <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.created_at))) }}</td>
+  <td class="text-nowrap">{{ time_ago.format(new Date(Date.parse(item.updated_at))) }}</td>
 </template>
