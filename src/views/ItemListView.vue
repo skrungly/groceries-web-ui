@@ -122,7 +122,7 @@ onUnmounted(() => clearInterval(searchInterval))
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 h-full">
+  <div class="flex flex-col gap-4 h-full relative">
     <div class="flex gap-4">
       <label class="input grow shrink-0 pr-0">
         <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
@@ -138,7 +138,7 @@ onUnmounted(() => clearInterval(searchInterval))
       </button>
     </div>
 
-    <div class="overflow-x-scroll h-full relative">
+    <div class="overflow-x-scroll h-full">
       <table class="table">
         <thead class="select-none">
           <tr>
@@ -163,9 +163,8 @@ onUnmounted(() => clearInterval(searchInterval))
           </tr>
         </thead>
 
-        <tbody :class="loadingItemLists ? 'opacity-30 duration-100' : 'opacity-100'">
+        <tbody v-if="items && items.length" class="transition-opacity" :class="loadingItemLists ? 'opacity-50 duration-200 pointer-events-none cursor-default select-none' : 'opacity-100'">
           <tr
-            v-if="items"
             v-for="item in items"
             class="hover:bg-base-200 duration-100 cursor-pointer"
             :class="item.percent_remaining ? 'opacity-100' : 'opacity-50'"
@@ -174,11 +173,16 @@ onUnmounted(() => clearInterval(searchInterval))
             <ItemListRow :item=item></ItemListRow>
           </tr>
         </tbody>
-
-        <div v-if="loadingItemLists" class="flex absolute justify-center top-32 right-0 left-0">
-          <span class="loading loading-spinner loading-xl opacity-80"></span>
-        </div>
       </table>
+
+      <div v-if="items && items.length == 0" class="flex justify-center items-center gap-4 opacity-70 text-xl my-8">
+        <FontAwesomeIcon class="text-3xl" icon="fa-solid fa-crow"/>
+        <span>no items found</span>
+      </div>
+    </div>
+
+    <div v-if="loadingItemLists" class="flex absolute justify-center top-32 right-0 left-0">
+      <span class="loading loading-spinner loading-xl opacity-80"></span>
     </div>
 
     <div class="fab sticky bottom-4 sm:hidden">
