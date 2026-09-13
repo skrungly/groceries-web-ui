@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from 'vue'
 
 import { api, type Item, type Product } from '@/api'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 const props = defineProps<{ itemToEdit: Item | null }>()
 const emit = defineEmits(["submit"])
@@ -15,6 +16,9 @@ const productInfoRequired = ref(false)
 const expiryInput: Ref<string | null> = ref(null)
 
 const barcodeField = useTemplateRef("barcode")
+
+const loadingProductInfo = ref(false)
+const submittingItemInfo = ref(false)
 
 function getLocalISOString(date?: Date): string {
   if (date === undefined) {
@@ -63,6 +67,8 @@ async function onEditQuantity(event: InputEvent) {
 }
 
 async function setupNewItemForm() {
+  loadingProductInfo.value = true
+
   let products = await api.get<Product[]>(
     "/products", {
       params: {
@@ -70,6 +76,8 @@ async function setupNewItemForm() {
       }
     }
   ).then(response => response.data)
+
+  loadingProductInfo.value = false
 
   if (products.length != 0) {
     productInfo.value = products[0]!
@@ -94,6 +102,8 @@ async function submitItem() {
   // adjust behaviour slightly for creating vs editing
   let method = props.itemToEdit ? "put" : "post"
   let endpoint = props.itemToEdit?.id ?? ""
+
+  submittingItemInfo.value = true
 
   if (productInfoRequired.value) {
     productInfo.value.barcode = barcodeInput.value
@@ -129,6 +139,8 @@ async function submitItem() {
     data: itemInfo.value
   })
 
+  submittingItemInfo.value = false
+
   resetForm()
   emit("submit")
 }
@@ -150,7 +162,10 @@ onMounted(resetForm)
         :disabled="barcodeChecked"
         required
       />
-      <button class="btn w-16" type="submit" :disabled="barcodeChecked">scan</button>
+      <button class="btn w-16" type="submit" :disabled="barcodeChecked">
+        <span v-if="!loadingProductInfo">scan</span>
+        <span v-else class="loading loading-spinner"></span>
+      </button>
     </form>
 
     <form @submit.prevent.stop="submitItem" class="flex flex-col items-center gap-4">
@@ -242,7 +257,8 @@ onMounted(resetForm)
         <button class="btn w-0 grow" type="button" @click="resetForm">reset</button>
 
         <button class="btn btn-accent w-0 grow" type="submit">
-          <span v-if="itemToEdit && itemInfo.percent_remaining == 0">finish</span>
+          <span v-if="submittingItemInfo" class="loading loading-spinner"></span>
+          <span v-else-if="itemToEdit && itemInfo.percent_remaining == 0">finish</span>
           <span v-else-if="itemToEdit">submit</span>
           <span v-else>create</span>
         </button>

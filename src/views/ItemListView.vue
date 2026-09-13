@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 import { api, ItemSortOption, type Item } from '@/api'
 import Modal from '@/components/Modal.vue'
 import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
-const items: Ref<Item[] | null> = ref(null)
 
 interface SortableTableHeader {
   title: string,
@@ -32,6 +30,9 @@ const SORTABLE_HEADERS: SortableTableHeader[] = [
     style: "min-w-32",
   }
 ]
+
+const items: Ref<Item[] | null> = ref(null)
+const loadingItemLists = ref(false)
 
 const SEARCH_INTERVAL_MS = 200
 
@@ -74,6 +75,8 @@ async function fetchItems() {
     name = search
   }
 
+  loadingItemLists.value = true
+
   await api.get<Item[]>(
     "/items", {
       params: {
@@ -95,6 +98,8 @@ async function fetchItems() {
       }
     }
   ).then(response => items.value = items.value?.concat(response.data) ?? null)
+
+  loadingItemLists.value = false
 }
 
 async function changeSort(option: ItemSortOption) {
@@ -117,16 +122,23 @@ onUnmounted(() => clearInterval(searchInterval))
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 h-full relative">
-    <label class="input w-full shrink-0 pr-0">
-      <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
-      <input type="search" v-model="searchInput" placeholder="search"/>
-      <button v-if="searchInput" class="cursor-pointer px-4 h-full opacity-50 hover:opacity-80" @click="searchInput = ''">
-        <FontAwesomeIcon icon="fa-solid fa-xmark"/>
-      </button>
-    </label>
+  <div class="flex flex-col gap-4 h-full">
+    <div class="flex gap-4">
+      <label class="input grow shrink-0 pr-0">
+        <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
+        <input type="text" v-model="searchInput" placeholder="search"/>
 
-    <div class="overflow-x-scroll h-full">
+        <button v-if="searchInput" class="cursor-pointer px-4 h-full opacity-50 hover:opacity-80" @click="searchInput = ''">
+          <FontAwesomeIcon icon="fa-solid fa-xmark"/>
+        </button>
+      </label>
+
+      <button class="hidden sm:flex btn btn-primary" @click="showNewItemModal = true">
+        <FontAwesomeIcon icon="fa-solid fa-barcode"/>
+      </button>
+    </div>
+
+    <div class="overflow-x-scroll h-full relative">
       <table class="table">
         <thead class="select-none">
           <tr>
@@ -151,7 +163,7 @@ onUnmounted(() => clearInterval(searchInterval))
           </tr>
         </thead>
 
-        <tbody>
+        <tbody :class="loadingItemLists ? 'opacity-30 duration-100' : 'opacity-100'">
           <tr
             v-if="items"
             v-for="item in items"
@@ -162,12 +174,16 @@ onUnmounted(() => clearInterval(searchInterval))
             <ItemListRow :item=item></ItemListRow>
           </tr>
         </tbody>
+
+        <div v-if="loadingItemLists" class="flex absolute justify-center top-32 right-0 left-0">
+          <span class="loading loading-spinner loading-xl opacity-80"></span>
+        </div>
       </table>
     </div>
 
-    <div class="fab sticky bottom-4">
+    <div class="fab sticky bottom-4 sm:hidden">
       <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">
-        <FontAwesomeIcon icon="fa-solid fa-plus"/>
+        <FontAwesomeIcon icon="fa-solid fa-barcode"/>
       </button>
     </div>
 
