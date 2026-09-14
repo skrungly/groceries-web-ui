@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from 'vue'
+import { nextTick, onMounted, ref, useTemplateRef, type Ref } from 'vue'
 
 import { api, type Item, type Product } from '@/api'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { basicErrorMessage } from '@/utils'
 
 const props = defineProps<{ itemToEdit: Item | null }>()
 const emit = defineEmits(["submit"])
@@ -19,6 +19,7 @@ const barcodeField = useTemplateRef("barcode")
 
 const loadingProductInfo = ref(false)
 const submittingItemInfo = ref(false)
+const formErrorMsg: Ref<string | null> = ref(null)
 
 function getLocalISOString(date?: Date): string {
   if (date === undefined) {
@@ -68,16 +69,24 @@ async function onEditQuantity(event: InputEvent) {
 
 async function setupNewItemForm() {
   loadingProductInfo.value = true
+  let products: Product[] = []
 
-  let products = await api.get<Product[]>(
-    "/products", {
-      params: {
-        barcode: barcodeInput.value
+  await api
+    .get<Product[]>(
+      "/products", {
+        params: {
+          barcode: barcodeInput.value
+        }
       }
-    }
-  ).then(response => response.data)
+    )
+    .then(response => products = response.data)
+    .catch(error => formErrorMsg.value = `couldn't get product info [${basicErrorMessage(error)}]`)
 
   loadingProductInfo.value = false
+
+  if (formErrorMsg.value) {
+    return
+  }
 
   if (products.length != 0) {
     productInfo.value = products[0]!
@@ -103,17 +112,7 @@ async function submitItem() {
   let method = props.itemToEdit ? "put" : "post"
   let endpoint = props.itemToEdit?.id ?? ""
 
-  submittingItemInfo.value = true
-
-  if (productInfoRequired.value) {
-    productInfo.value.barcode = barcodeInput.value
-
-    productInfo.value = await api.request<Product>({
-      method: method,
-      url: `/products/${endpoint}`,
-      data: productInfo.value
-    }).then(response => response.data)
-  }
+  formErrorMsg.value = null
 
   // it would be nice to track both remaining % and waste % at the same time,
   // but for now the user can edit 'percent_remaining' to undiscard an item
@@ -132,17 +131,42 @@ async function submitItem() {
     itemInfo.value.expires_at = expiryDate.toISOString()
   }
 
+  submittingItemInfo.value = true
+
+  if (productInfoRequired.value) {
+    productInfo.value.barcode = barcodeInput.value
+
+    await api
+      .request<Product>({
+        method: method,
+        url: `/products/${endpoint}`,
+        data: productInfo.value
+      })
+      .then(response => productInfo.value = response.data)
+      .catch(error => formErrorMsg.value = `submission failed [${basicErrorMessage(error)}]`)
+  }
+
+  if (formErrorMsg.value) {
+    submittingItemInfo.value = false
+    return
+  }
+
   itemInfo.value.product_id = productInfo.value.id
-  await api.request<Item>({
-    method: method,
-    url: `/items/${endpoint}`,
-    data: itemInfo.value
-  })
+
+  await api
+    .request<Item>({
+      method: method,
+      url: `/items/${endpoint}`,
+      data: itemInfo.value
+    })
+    .catch(error => formErrorMsg.value = `submission failed [${basicErrorMessage(error)}]`)
 
   submittingItemInfo.value = false
 
-  resetForm()
-  emit("submit")
+  if (!formErrorMsg.value) {
+    resetForm()
+    emit("submit")
+  }
 }
 
 onMounted(resetForm)
@@ -161,6 +185,7 @@ onMounted(resetForm)
         class="input grow"
         :disabled="barcodeChecked"
         required
+        maxlength="128"
       />
       <button class="btn w-16" type="submit" :disabled="barcodeChecked">
         <span v-if="!loadingProductInfo">scan</span>
@@ -176,7 +201,7 @@ onMounted(resetForm)
           <span class="label min-w-25 gap-0.75">
             name<span v-if="productInfoRequired" class="text-error text-xs">*</span>
           </span>
-          <input v-model="productInfo.name" type="text" :disabled="!productInfoRequired" required/>
+          <input v-model="productInfo.name" type="text" :disabled="!productInfoRequired" required maxlength="128"/>
         </label>
 
         <label class="input w-full">
@@ -186,24 +211,26 @@ onMounted(resetForm)
             @input="onEditQuantity"
             type="number"
             placeholder="1"
+            min="1"
+            step="1"
             :disabled="!productInfoRequired"
           />
         </label>
 
         <label v-if="productInfoRequired" class="input w-full">
           <span class="label min-w-25">use within</span>
-          <input v-model="productInfo.shelf_life_opened" type="number" placeholder="0"/>
+          <input v-model="productInfo.shelf_life_opened"  placeholder="0" min="0" step="1"/>
           <span class="label">days of opening</span>
         </label>
 
         <label v-if="productInfoRequired" class="input w-full">
           <span class="label min-w-25">cost (£)</span>
-          <input v-model="productInfo.cost" type="number" placeholder="0.00" step=".01"/>
+          <input v-model="productInfo.cost" type="number" placeholder="0.00" min="0" step=".01"/>
         </label>
 
         <label v-if="productInfoRequired" class="input w-full">
           <span class="label min-w-25">weight (g)</span>
-          <input v-model="productInfo.net_weight" type="number" placeholder="0"/>
+          <input v-model="productInfo.net_weight" type="number" min="0" placeholder="0"/>
         </label>
       </div>
 
@@ -244,6 +271,8 @@ onMounted(resetForm)
           </span>
         </label>
       </div>
+
+      <span v-if="formErrorMsg" class="text-error text-sm">{{ formErrorMsg.toLowerCase() }}</span>
 
       <div v-show="barcodeChecked || itemToEdit" class="flex gap-4 w-full">
         <button

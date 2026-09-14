@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 import { api, ItemSortOption, type Item } from '@/api'
+import { basicErrorMessage } from '@/utils'
 import Modal from '@/components/Modal.vue'
 import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
@@ -32,7 +33,8 @@ const SORTABLE_HEADERS: SortableTableHeader[] = [
 ]
 
 const items: Ref<Item[] | null> = ref(null)
-const loadingItemLists = ref(false)
+const itemListLoading = ref(false)
+const itemListErrorMsg: Ref<string | null> = ref(null)
 
 const SEARCH_INTERVAL_MS = 200
 
@@ -57,6 +59,7 @@ const itemToEdit: Ref<Item | null> = ref(null)
 async function fetchItems() {
   // ensure the edit form is closed
   itemToEdit.value = null
+  itemListErrorMsg.value = null
 
   let sortPrefix = sortBy.value && !sortAsc.value ? "-" : ""
   let sortQuery = sortBy.value ? sortPrefix + sortBy.value : null
@@ -75,31 +78,39 @@ async function fetchItems() {
     name = search
   }
 
-  loadingItemLists.value = true
+  itemListLoading.value = true
 
-  await api.get<Item[]>(
-    "/items", {
-      params: {
-        sort: sortQuery ?? ItemSortOption.Expiry,
-        remaining: 1,  // i.e. true
-        barcode: barcode,
-        name: name,
+  try {
+    let itemsResponse = await api.get<Item[]>(
+      "/items", {
+        params: {
+          sort: sortQuery ?? ItemSortOption.Expiry,
+          remaining: 1,  // i.e. true
+          barcode: barcode,
+          name: name,
+        }
       }
-    }
-  ).then(response => items.value = response.data)
+    )
 
-  await api.get<Item[]>(
-    "/items", {
-      params: {
-        sort: sortQuery ?? `-${ItemSortOption.Updated}`,
-        remaining: 0,
-        barcode: barcode,
-        name: name,
+    let olderItemsResponse = await api.get<Item[]>(
+      "/items", {
+        params: {
+          sort: sortQuery ?? `-${ItemSortOption.Updated}`,
+          remaining: 0,
+          barcode: barcode,
+          name: name,
+        }
       }
-    }
-  ).then(response => items.value = items.value?.concat(response.data) ?? null)
+    )
 
-  loadingItemLists.value = false
+    items.value = itemsResponse.data.concat(olderItemsResponse.data)
+
+  } catch (error) {
+    items.value = null
+    itemListErrorMsg.value = basicErrorMessage(error)
+  }
+
+  itemListLoading.value = false
 }
 
 async function changeSort(option: ItemSortOption) {
@@ -128,9 +139,16 @@ onUnmounted(() => clearInterval(searchInterval))
         <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
         <input type="text" v-model="searchInput" placeholder="search"/>
 
-        <button v-if="searchInput" class="cursor-pointer px-4 h-full opacity-50 hover:opacity-80" @click="searchInput = ''">
-          <FontAwesomeIcon icon="fa-solid fa-xmark"/>
-        </button>
+
+        <div class="mx-3 opacity-50 hover:opacity-80">
+          <button v-if="searchInput" class="cursor-pointer" @click="searchInput = ''">
+            <FontAwesomeIcon icon="fa-solid fa-xmark"/>
+          </button>
+
+          <button v-else class="cursor-pointer" @click="fetchItems">
+            <FontAwesomeIcon icon="fa-solid fa-arrows-rotate"/>
+          </button>
+        </div>
       </label>
 
       <button class="hidden sm:flex btn btn-primary" @click="showNewItemModal = true">
@@ -163,10 +181,10 @@ onUnmounted(() => clearInterval(searchInterval))
           </tr>
         </thead>
 
-        <tbody v-if="items && items.length" class="transition-opacity" :class="loadingItemLists ? 'opacity-50 duration-200 pointer-events-none cursor-default select-none' : 'opacity-100'">
+        <tbody v-if="items && items.length">
           <tr
             v-for="item in items"
-            class="hover:bg-base-200 duration-100 cursor-pointer"
+            class="hover:bg-base-200 cursor-pointer"
             :class="item.percent_remaining ? 'opacity-100' : 'opacity-50'"
             @click="itemToEdit = item"
           >
@@ -175,13 +193,20 @@ onUnmounted(() => clearInterval(searchInterval))
         </tbody>
       </table>
 
-      <div v-if="items && items.length == 0" class="flex justify-center items-center gap-4 opacity-70 text-xl my-8">
-        <FontAwesomeIcon class="text-3xl" icon="fa-solid fa-crow"/>
-        <span>no items found</span>
+      <div class="flex justify-center opacity-80 text-md my-8">
+        <div v-if="itemListErrorMsg" class="text-error">
+          <FontAwesomeIcon class="text-xl px-2" icon="fa-solid fa-cat"/>
+          <span>could not load items [{{ itemListErrorMsg.toLowerCase() }}]</span>
+        </div>
+
+        <div v-else-if="items && items.length == 0">
+          <FontAwesomeIcon class="text-xl px-2" icon="fa-solid fa-crow"/>
+          <span>no items found</span>
+        </div>
       </div>
     </div>
 
-    <div v-if="loadingItemLists" class="flex absolute justify-center top-32 right-0 left-0">
+    <div v-if="itemListLoading" class="flex absolute justify-center top-32 right-0 left-0">
       <span class="loading loading-spinner loading-xl opacity-80"></span>
     </div>
 

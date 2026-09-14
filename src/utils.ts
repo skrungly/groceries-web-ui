@@ -1,8 +1,20 @@
 import 'javascript-time-ago/locale/en'
 
 import TimeAgo from 'javascript-time-ago'
+import { AxiosError } from 'axios'
 
 export const time_ago = new TimeAgo('en')
+
+export function basicErrorMessage(error: unknown): string {
+  if (error instanceof AxiosError && error.response) {
+    return `${error.response.status}: ${error.response.statusText}`
+
+  } else if (error instanceof Error) {
+    return error.message
+  }
+
+  return "unknown error"
+}
 
 export function shuffle<T>(array: T[]) {
   // shuffle in-place using Durstenfeld algorithm
