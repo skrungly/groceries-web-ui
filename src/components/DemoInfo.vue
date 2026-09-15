@@ -75,7 +75,7 @@ onUnmounted(() => demoInterval.value && clearInterval(demoInterval.value))
         <FontAwesomeIcon class="text-xl" icon="fa-solid fa-crow"/>
         <h3 class="text-lg font-bold">hey!</h3>
       </div>
-      <p class="text-sm">
+      <p class="text-sm text-center">
         you're currently viewing a demo. the database is randomly regenerated
         every hour, so feel free to create and edit items!
       </p>
