@@ -133,8 +133,8 @@ onUnmounted(() => clearInterval(searchInterval))
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 h-full relative">
-    <div class="flex gap-4">
+  <div class="flex flex-col h-full relative">
+    <div class="flex gap-4 bg-base-100 sticky py-4 top-0 z-1">
       <label class="input grow shrink-0 pr-0">
         <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" class="opacity-50"/>
         <input type="text" v-model="searchInput" placeholder="search"/>
@@ -151,8 +151,9 @@ onUnmounted(() => clearInterval(searchInterval))
         </div>
       </label>
 
-      <button class="hidden sm:flex btn btn-primary" @click="showNewItemModal = true">
-        <FontAwesomeIcon icon="fa-solid fa-barcode"/>
+      <button class="hidden md:block btn btn-primary" @click="showNewItemModal = true">
+        <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2"/>
+        new item
       </button>
     </div>
 
@@ -210,9 +211,9 @@ onUnmounted(() => clearInterval(searchInterval))
       <span class="loading loading-spinner loading-xl opacity-80"></span>
     </div>
 
-    <div class="fab sticky bottom-4 sm:hidden">
+    <div class="fab sticky bottom-22 md:hidden">
       <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">
-        <FontAwesomeIcon icon="fa-solid fa-barcode"/>
+        <FontAwesomeIcon icon="fa-solid fa-plus"/>
       </button>
     </div>
 
