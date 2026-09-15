@@ -217,12 +217,14 @@ onUnmounted(() => clearInterval(searchInterval))
     </div>
 
     <Modal v-if="showNewItemModal" @close="showNewItemModal = false">
+      <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="showNewItemModal = false">×</button>
       <h3 class="text-lg font-bold">new item</h3>
 
       <ItemForm :item-to-edit=null @submit="fetchItems"></ItemForm>
     </Modal>
 
     <Modal v-if="itemToEdit" @close="itemToEdit = null">
+      <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="itemToEdit = null">×</button>
       <h3 class="text-lg font-bold text-nowrap overflow-hidden text-ellipsis">{{ itemToEdit.product.name }}</h3>
 
       <ItemForm :item-to-edit=itemToEdit @submit="fetchItems"></ItemForm>
