@@ -4,8 +4,15 @@ import { nextTick, onMounted, ref, useTemplateRef, type Ref } from 'vue'
 import { api, type Item, type Product } from '@/api'
 import { basicErrorMessage } from '@/utils'
 
-const props = defineProps<{ itemToEdit: Item | null }>()
-const emit = defineEmits(["submit"])
+// TODO: split up the Item and Product forms
+const props = defineProps<{
+  itemToEdit: Item | null,
+  productToEdit: Product | null
+}>()
+
+const emit = defineEmits<{
+  (e: "submit"): void
+}>()
 
 const barcodeInput: Ref<string | null> = ref(null)
 const barcodeChecked: Ref<boolean> = ref(false)
@@ -18,7 +25,7 @@ const expiryInput: Ref<string | null> = ref(null)
 const barcodeField = useTemplateRef("barcode")
 
 const loadingProductInfo = ref(false)
-const submittingItemInfo = ref(false)
+const loadingSubmit = ref(false)
 const formErrorMsg: Ref<string | null> = ref(null)
 
 function getLocalISOString(date?: Date): string {
@@ -35,11 +42,11 @@ async function resetForm() {
   barcodeInput.value = null
   barcodeChecked.value = false
   itemInfo.value = { ...props.itemToEdit }
-  productInfo.value = props.itemToEdit?.product ?? {}
-  productInfoRequired.value = false
+  productInfo.value = props.productToEdit ?? props.itemToEdit?.product ?? {}
+  productInfoRequired.value = props.productToEdit !== null
   expiryInput.value = null
 
-  if (!props.itemToEdit) {
+  if (!props.itemToEdit && !props.productToEdit) {
     // focus doesn't apply without deferring to nextTick. not sure why!
     nextTick(() => barcodeField.value?.focus())
   }
@@ -107,6 +114,31 @@ async function discardItem() {
   submitItem()
 }
 
+async function submitProduct() {
+  let method = props.productToEdit ? "put" : "post"
+  let endpoint = props.productToEdit?.id ?? ""
+
+  formErrorMsg.value = null
+  loadingSubmit.value = true
+
+  await api
+    .request<Product>({
+      method: method,
+      url: `/products/${endpoint}`,
+      data: productInfo.value
+    })
+    .then(response => productInfo.value = response.data)
+    .catch(error => formErrorMsg.value = `submission failed [${basicErrorMessage(error)}]`)
+
+  if (formErrorMsg.value) {
+    loadingSubmit.value = false
+
+  } else if (props.productToEdit) {
+    resetForm()
+    emit("submit")
+  }
+}
+
 async function submitItem() {
   // adjust behaviour slightly for creating vs editing
   let method = props.itemToEdit ? "put" : "post"
@@ -131,23 +163,14 @@ async function submitItem() {
     itemInfo.value.expires_at = expiryDate.toISOString()
   }
 
-  submittingItemInfo.value = true
+  loadingSubmit.value = true
 
   if (productInfoRequired.value) {
     productInfo.value.barcode = barcodeInput.value
-
-    await api
-      .request<Product>({
-        method: method,
-        url: `/products/${endpoint}`,
-        data: productInfo.value
-      })
-      .then(response => productInfo.value = response.data)
-      .catch(error => formErrorMsg.value = `submission failed [${basicErrorMessage(error)}]`)
+    submitProduct()
   }
 
   if (formErrorMsg.value) {
-    submittingItemInfo.value = false
     return
   }
 
@@ -161,7 +184,7 @@ async function submitItem() {
     })
     .catch(error => formErrorMsg.value = `submission failed [${basicErrorMessage(error)}]`)
 
-  submittingItemInfo.value = false
+  loadingSubmit.value = false
 
   if (!formErrorMsg.value) {
     resetForm()
@@ -175,7 +198,7 @@ onMounted(resetForm)
 <template>
   <div class="flex flex-col gap-4 pt-4">
     <!-- only need to scan a barcode when creating new item -->
-    <form v-if="!itemToEdit" @submit.prevent="setupNewItemForm" class="flex gap-4">
+    <form v-if="!itemToEdit && !productToEdit" @submit.prevent="setupNewItemForm" class="flex gap-4">
       <input
         tabindex="0"
         type="text"
@@ -193,8 +216,11 @@ onMounted(resetForm)
       </button>
     </form>
 
-    <form @submit.prevent.stop="submitItem" class="flex flex-col items-center gap-4">
-      <div v-if="barcodeChecked" class="flex flex-col gap-4 w-full">
+    <form
+      @submit.prevent.stop="() => productToEdit ? submitProduct() : submitItem()"
+      class="flex flex-col items-center gap-4"
+    >
+      <div v-if="barcodeChecked || productToEdit" class="flex flex-col gap-4 w-full">
         <div class="divider text-xs m-0">product info</div>
 
         <label class="input w-full">
@@ -274,7 +300,7 @@ onMounted(resetForm)
 
       <span v-if="formErrorMsg" class="text-error text-sm">{{ formErrorMsg.toLowerCase() }}</span>
 
-      <div v-show="barcodeChecked || itemToEdit" class="flex gap-4 w-full">
+      <div v-show="barcodeChecked || itemToEdit || productToEdit" class="flex gap-4 w-full">
         <button
           v-if="itemToEdit"
           class="btn btn-error w-0 grow"
@@ -286,14 +312,14 @@ onMounted(resetForm)
         <button class="btn w-0 grow" type="button" @click="resetForm">reset</button>
 
         <button class="btn btn-accent w-0 grow" type="submit">
-          <span v-if="submittingItemInfo" class="loading loading-spinner"></span>
+          <span v-if="loadingSubmit" class="loading loading-spinner"></span>
           <span v-else-if="itemToEdit && itemInfo.percent_remaining == 0">finish</span>
-          <span v-else-if="itemToEdit">submit</span>
+          <span v-else-if="itemToEdit || productToEdit">submit</span>
           <span v-else>create</span>
         </button>
       </div>
 
-      <div v-if="!barcodeChecked && !itemToEdit" class="flex flex-col gap-4 w-full">
+      <div v-if="!barcodeChecked && !itemToEdit && !productToEdit" class="flex flex-col gap-4 w-full">
         <div class="divider text-xs m-0">or</div>
 
         <div class="cursor-not-allowed">
