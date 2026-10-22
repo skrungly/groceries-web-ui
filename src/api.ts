@@ -41,3 +41,30 @@ export enum ItemSortOption {
   Created = "created_at",
   Updated = "updated_at",
 }
+
+export interface Stats {
+  total_items: number
+  total_items_cost: number | null
+  total_items_weight: number | null
+
+  current_items: number
+  current_items_cost: number | null
+  current_items_weight: number | null
+
+  products: number
+  products_with_cost: number
+  products_with_weight: number
+
+  wasted_items: number
+  wasted_quantity: number
+  wasted_cost: number | null
+  wasted_weight: number | null
+
+  expired_items: number
+  wasted_products: (
+    Product & {
+      amount_wasted: number,
+      quantity_wasted: number,
+    }
+  )[]
+}
