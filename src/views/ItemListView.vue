@@ -136,12 +136,6 @@ onMounted(fetchItems)
         <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2"/>
         new item
       </button>
-
-      <div class="fab sticky bottom-22 md:hidden">
-        <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">
-          <FontAwesomeIcon icon="fa-solid fa-plus"/>
-        </button>
-      </div>
     </template>
 
     <template v-slot:header>
@@ -182,6 +176,12 @@ onMounted(fetchItems)
       </tbody>
     </template>
   </DataTable>
+
+  <div class="fab sticky bottom-22 md:hidden">
+    <button class="btn btn-xl btn-circle btn-primary" @click="showNewItemModal = true">
+      <FontAwesomeIcon icon="fa-solid fa-plus"/>
+    </button>
+  </div>
 
   <Modal v-if="showNewItemModal" @close="showNewItemModal = false">
     <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="showNewItemModal = false">×</button>
