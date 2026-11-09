@@ -3,6 +3,7 @@ import { api, type Product } from '@/api'
 import DataTable from '@/components/DataTable.vue'
 import ItemForm from '@/components/ItemForm.vue'
 import Modal from '@/components/Modal.vue'
+import ProductForm from '@/components/ProductForm.vue'
 import { basicErrorMessage, time_ago } from '@/utils'
 import { onMounted, ref, type Ref } from 'vue'
 
@@ -81,8 +82,13 @@ onMounted(fetchProducts)
   <!-- TODO: tidy up this repeated code from ItemListView -->
   <Modal v-if="productToEdit" @close="productToEdit = null">
     <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="productToEdit = null">×</button>
-    <h3 class="text-lg font-bold text-nowrap overflow-hidden text-ellipsis">{{ productToEdit.name }}</h3>
+    <h3 class="text-lg font-bold text-nowrap overflow-hidden text-ellipsis mb-4">{{ productToEdit.name }}</h3>
 
-    <ItemForm :item-to-edit=null :product-to-edit=productToEdit @submit="fetchProducts"></ItemForm>
+    <ProductForm
+      :product-to-edit="productToEdit"
+      :read-only="false"
+      :show-buttons="true"
+      @submit="fetchProducts"
+    />
   </Modal>
 </template>

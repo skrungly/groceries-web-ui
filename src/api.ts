@@ -68,3 +68,31 @@ export interface Stats {
     }
   )[]
 }
+
+export async function submitItem(item: Partial<Item>) {
+  let method = item.id ? "put" : "post"
+  let endpoint = item.id ?? ""
+
+  // it would be nice to track both remaining % and waste % at the same time,
+  // but for now the user can edit 'percent_remaining' to undiscard an item
+  if (item.percent_remaining && item.percent_wasted) {
+    item.percent_wasted = 0
+  }
+
+  return await api.request<Item>({
+    method: method,
+    url: `/items/${endpoint}`,
+    data: item
+  })
+}
+
+export async function submitProduct(product: Partial<Product>) {
+  let method = product.id ? "put" : "post"
+  let endpoint = product.id ?? ""
+
+  return await api.request<Product>({
+      method: method,
+      url: `/products/${endpoint}`,
+      data: product,
+    })
+}

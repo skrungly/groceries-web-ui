@@ -8,6 +8,7 @@ import ItemListRow from '@/components/ItemListRow.vue'
 import ItemForm from '@/components/ItemForm.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import DataTable from '@/components/DataTable.vue'
+import BarcodeForm from '@/components/BarcodeForm.vue'
 
 interface SortableTableHeader {
   title: string,
@@ -53,6 +54,7 @@ async function updateSearch(search: string) {
 async function fetchItems() {
   // ensure the edit form is closed
   itemToEdit.value = null
+  showNewItemModal.value = false
   errorMsg.value = null
 
   let sortPrefix = sortBy.value && !sortAsc.value ? "-" : ""
@@ -185,15 +187,20 @@ onMounted(fetchItems)
 
   <Modal v-if="showNewItemModal" @close="showNewItemModal = false">
     <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="showNewItemModal = false">×</button>
-    <h3 class="text-lg font-bold">new item</h3>
+    <h3 class="text-lg font-bold mb-4">new item</h3>
 
-    <ItemForm :item-to-edit=null :product-to-edit=null @submit="fetchItems"></ItemForm>
+    <BarcodeForm @submit="fetchItems"/>
   </Modal>
 
   <Modal v-if="itemToEdit" @close="itemToEdit = null">
     <button class="btn btn-circle btn-ghost absolute right-2 top-2" @click="itemToEdit = null">×</button>
-    <h3 class="text-lg font-bold text-nowrap overflow-hidden text-ellipsis">{{ itemToEdit.product.name }}</h3>
+    <h3 class="text-lg font-bold text-nowrap overflow-hidden text-ellipsis mb-4">{{ itemToEdit.product.name }}</h3>
 
-    <ItemForm :item-to-edit=itemToEdit :product-to-edit=null @submit="fetchItems"></ItemForm>
+    <ItemForm
+      :product-info="itemToEdit.product"
+      :item-to-edit="itemToEdit"
+      :show-buttons="true"
+      @submit="fetchItems"
+    />
   </Modal>
 </template>
